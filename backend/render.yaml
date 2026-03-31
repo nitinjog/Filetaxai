@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: filetaxai-api
+    env: node
+    plan: starter
+    region: singapore  # Closest to India
+    buildCommand: npm install && npm run db:generate && npm run build
+    startCommand: npx prisma db push && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: filetaxai-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        value: https://YOUR_NETLIFY_APP.netlify.app  # Update after Netlify deploy
+      - key: MAX_FILE_SIZE_MB
+        value: 10
+      - key: OPENROUTER_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o
+      - key: OPENROUTER_FALLBACK_MODEL
+        value: anthropic/claude-3-5-sonnet
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false  # Set manually
+      - key: CLOUDINARY_API_KEY
+        sync: false  # Set manually
+      - key: CLOUDINARY_API_SECRET
+        sync: false  # Set manually
+      - key: GEMINI_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: OPENROUTER_GEMINI_MODEL
+        value: google/gemini-2.5-flash-preview
+      - key: ENCRYPTION_KEY
+        generateValue: true
+
+databases:
+  - name: filetaxai-db
+    databaseName: filetaxai
+    user: filetaxai_user
+    plan: starter
+    region: singapore
