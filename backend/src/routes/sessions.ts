@@ -33,11 +33,12 @@ router.post(
 
     if (existing) {
       // Return existing session instead of creating a duplicate
-      return res.json({
+      res.json({
         success: true,
         message: "Returning existing active session for this tax year",
         data: { session: existing },
       });
+      return;
     }
 
     const session = await prisma.taxSession.create({

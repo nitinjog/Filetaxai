@@ -215,7 +215,7 @@ function buildForm16Result(parsed: Record<string, any>, rawText: string): Parsed
   for (const field of NUM_FIELDS) {
     const val = parsed[field];
     if (val !== undefined && val !== null && val !== "") {
-      (result as Record<string, unknown>)[field] = Number(String(val).replace(/,/g, "")) || 0;
+      (result as unknown as Record<string, unknown>)[field] = Number(String(val).replace(/,/g, "")) || 0;
     }
   }
 

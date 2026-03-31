@@ -202,10 +202,11 @@ export async function getStorageUsage(): Promise<{ used_bytes: number; limit_byt
   }
   try {
     const usage = await cloudinary.api.usage();
+    const storage = (usage as Record<string, { usage: number; limit: number; usage_percent: number }>).storage;
     return {
-      used_bytes: (usage as Record<string, number>).storage?.usage || 0,
-      limit_bytes: (usage as Record<string, number>).storage?.limit || 0,
-      usage_percent: (usage as Record<string, number>).storage?.usage_percent || 0,
+      used_bytes: storage?.usage || 0,
+      limit_bytes: storage?.limit || 0,
+      usage_percent: storage?.usage_percent || 0,
     };
   } catch { return { used_bytes: 0, limit_bytes: 0, usage_percent: 0 }; }
 }

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import asyncHandler from "express-async-handler";
+import { Prisma } from "@prisma/client";
 import prisma from "../models/db";
 import { verifyToken } from "../middleware/auth";
 import { AppError, Errors } from "../middleware/errorHandler";
@@ -38,30 +39,21 @@ async function buildIncomeDataFromSession(
     );
   }
 
-  const parsedDocuments: ParsedDocument[] = session.documents
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parsedDocuments: ParsedDocument[] = (session.documents
     .filter((d) => d.parsed_data !== null)
     .map((doc) => {
+      const pd = doc.parsed_data as unknown;
       switch (doc.type) {
-        case "FORM16":
-          return { type: "FORM16" as const, data: doc.parsed_data };
-        case "FORM26AS":
-          return { type: "FORM26AS" as const, data: doc.parsed_data };
-        case "AIS":
-          return { type: "AIS" as const, data: doc.parsed_data };
+        case "FORM16":   return { type: "FORM16" as const, data: pd };
+        case "FORM26AS": return { type: "FORM26AS" as const, data: pd };
+        case "AIS":      return { type: "AIS" as const, data: pd };
         case "SALARY_SLIP":
-          return {
-            type: "SALARY_SLIP" as const,
-            data: Array.isArray(doc.parsed_data)
-              ? doc.parsed_data
-              : [doc.parsed_data],
-          };
+          return { type: "SALARY_SLIP" as const, data: Array.isArray(pd) ? pd : [pd] };
         default:
-          return {
-            type: "OTHER" as const,
-            data: doc.parsed_data as { raw_text: string },
-          };
+          return { type: "OTHER" as const, data: pd as { raw_text: string } };
       }
-    });
+    })) as unknown as ParsedDocument[];
 
   return buildIncomeData(parsedDocuments, userAge);
 }
@@ -121,7 +113,7 @@ router.post(
         final_tax_payable: recommended.net_tax_payable,
         tds_deducted: recommended.tds_deducted,
         refund_or_payable: recommended.refund_or_payable,
-        ai_review: null, // Reset AI review on recompute
+        ai_review: Prisma.DbNull, // Reset AI review on recompute
       },
     });
 
@@ -261,7 +253,7 @@ router.post(
     const computation = await prisma.taxComputation.upsert({
       where: { session_id: session.id },
       create: { session_id: session.id, ...computationData },
-      update: { ...computationData, ai_review: null },
+      update: { ...computationData, ai_review: Prisma.DbNull },
     });
 
     await prisma.taxSession.update({

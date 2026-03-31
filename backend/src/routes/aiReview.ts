@@ -94,7 +94,7 @@ router.post(
     const [review, suggestions, explanation] = await Promise.allSettled([
       reviewTaxComputation(incomeData, comparisonResult),
       suggestMissingDeductions(incomeData),
-      explainInSimpleTerms(comparisonResult, incomeData),
+      explainInSimpleTerms(comparisonResult, comparisonResult.recommended_regime),
     ]);
 
     const aiReviewData = {
@@ -156,14 +156,15 @@ router.get(
     // Check if cached
     const cached = computation.ai_review as Record<string, unknown> | null;
     if (cached?.explanation) {
-      return res.json({
+      res.json({
         success: true,
         data: { explanation: cached.explanation, cached: true },
       });
+      return;
     }
 
     // Generate fresh explanation
-    const explanation = await explainInSimpleTerms(comparisonResult, incomeData);
+    const explanation = await explainInSimpleTerms(comparisonResult, comparisonResult.recommended_regime);
 
     // Cache it
     const updatedReview = { ...(cached || {}), explanation };
@@ -195,10 +196,11 @@ router.get(
     // Check if cached
     const cached = computation.ai_review as Record<string, unknown> | null;
     if (cached?.suggestions && Array.isArray(cached.suggestions) && cached.suggestions.length > 0) {
-      return res.json({
+      res.json({
         success: true,
         data: { suggestions: cached.suggestions, cached: true },
       });
+      return;
     }
 
     // Generate fresh suggestions
@@ -234,10 +236,11 @@ router.get(
     // Check if cached
     const cached = computation.ai_review as Record<string, unknown> | null;
     if (cached?.anomalies) {
-      return res.json({
+      res.json({
         success: true,
         data: { anomalies: cached.anomalies, cached: true },
       });
+      return;
     }
 
     // Build document summaries for anomaly detection
@@ -255,7 +258,7 @@ router.get(
         };
       });
 
-    const anomalies = await detectAnomalies(incomeData, documentSummaries);
+    const anomalies = await detectAnomalies(incomeData);
 
     // Cache it
     const updatedReview = { ...(cached || {}), anomalies };
@@ -269,7 +272,6 @@ router.get(
       data: {
         anomalies,
         total: anomalies.length,
-        high_severity: anomalies.filter((a) => a.severity === "HIGH").length,
         cached: false,
       },
     });

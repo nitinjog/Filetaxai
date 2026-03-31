@@ -316,23 +316,21 @@ router.get(
     }
 
     // Build ParsedDocument array from DB records
-    const parsedDocuments: ParsedDocument[] = session.documents
+    const parsedDocuments: ParsedDocument[] = (session.documents
       .map((doc) => {
         if (!doc.parsed_data) return null;
+        const pd = doc.parsed_data as unknown;
         switch (doc.type) {
-          case "FORM16":
-            return { type: "FORM16" as const, data: doc.parsed_data };
-          case "FORM26AS":
-            return { type: "FORM26AS" as const, data: doc.parsed_data };
-          case "AIS":
-            return { type: "AIS" as const, data: doc.parsed_data };
+          case "FORM16":   return { type: "FORM16" as const, data: pd };
+          case "FORM26AS": return { type: "FORM26AS" as const, data: pd };
+          case "AIS":      return { type: "AIS" as const, data: pd };
           case "SALARY_SLIP":
-            return { type: "SALARY_SLIP" as const, data: [doc.parsed_data] };
+            return { type: "SALARY_SLIP" as const, data: Array.isArray(pd) ? pd : [pd] };
           default:
-            return { type: "OTHER" as const, data: doc.parsed_data as { raw_text: string } };
+            return { type: "OTHER" as const, data: pd as { raw_text: string } };
         }
       })
-      .filter((d): d is ParsedDocument => d !== null);
+      .filter((d) => d !== null)) as unknown as ParsedDocument[];
 
     // Get user age (default 30 if not available)
     const user = await prisma.user.findUnique({
