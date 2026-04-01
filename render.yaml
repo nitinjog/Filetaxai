@@ -4,6 +4,7 @@ services:
     env: node
     plan: starter
     region: singapore  # Closest to India
+    rootDir: backend
     buildCommand: npm install && npm run db:generate && npm run build
     startCommand: npx prisma db push && npm start
     healthCheckPath: /api/health
