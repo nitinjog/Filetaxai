@@ -4,8 +4,8 @@ services:
     env: node
     plan: starter
     region: singapore  # Closest to India
-    buildCommand: npm install && npm run db:generate && npm run build
-    startCommand: npx prisma db push && npm start
+    buildCommand: npm install && npm run db:generate && npm run build && npx prisma db push
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
