@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import https from "https";
 import http from "http";
+import fs from "fs";
+import path from "path";
 import prisma from "../models/db";
 import { verifyToken } from "../middleware/auth";
 import { AppError, Errors } from "../middleware/errorHandler";
@@ -23,6 +25,16 @@ router.use(verifyToken);
 // ─── Helper: Download document buffer from URL ────────────────────────────────
 
 async function downloadBuffer(url: string): Promise<Buffer> {
+  // Local file — read from disk directly (avoids self-referential HTTP on Render)
+  if (url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1")) {
+    const urlPath = new URL(url).pathname; // e.g. /uploads/session/type/file.pdf
+    const localPath = path.join(process.cwd(), urlPath);
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
+    throw new Error(`Local file not found: ${localPath}`);
+  }
+
   return new Promise((resolve, reject) => {
     const protocol = url.startsWith("https") ? https : http;
     const chunks: Buffer[] = [];

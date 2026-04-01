@@ -17,7 +17,7 @@ function createOpenRouterClient(): OpenAI {
   });
 }
 
-const PRIMARY_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4.1";
+const PRIMARY_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o";
 const GEMINI_MODEL = process.env.OPENROUTER_GEMINI_MODEL || "google/gemini-2.5-flash-preview";
 const FALLBACK_MODEL = process.env.OPENROUTER_FALLBACK_MODEL || "anthropic/claude-3-5-sonnet";
 
@@ -175,7 +175,7 @@ export async function extractForm16WithGemini(
     raw = await callAI(INDIAN_TAX_SYSTEM_PROMPT, fullPrompt, GEMINI_MODEL, true);
   } catch {
     // ── Attempt 3: OpenRouter → gpt-4.1 ──────────────────────────────────
-    console.warn("[Parse] Gemini via OpenRouter failed, trying gpt-4.1...");
+    console.warn("[Parse] Gemini via OpenRouter failed, trying gpt-4o...");
     raw = await callAI(INDIAN_TAX_SYSTEM_PROMPT, fullPrompt, PRIMARY_MODEL, true);
   }
 
