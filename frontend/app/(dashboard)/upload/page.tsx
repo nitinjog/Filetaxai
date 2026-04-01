@@ -66,7 +66,7 @@ export default function UploadPage() {
   // Auto-create session if none exists
   useEffect(() => {
     if (!currentSession && user) {
-      createSession.mutate();
+      createSession.mutate(undefined);
     }
   }, [currentSession, user]);
 
@@ -83,7 +83,7 @@ export default function UploadPage() {
     documentType: string,
     onProgress: (pct: number) => void
   ) => {
-    const sessionId = currentSession?.id ?? (await createSession.mutateAsync()).id;
+    const sessionId = currentSession?.id ?? (await createSession.mutateAsync(undefined)).id;
     await uploadDocument.mutateAsync({ sessionId, file, documentType, onProgress });
     // Auto-parse immediately after upload so compute page is always pre-filled
     parseDocuments.mutate(sessionId);

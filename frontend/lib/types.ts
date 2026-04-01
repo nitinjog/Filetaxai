@@ -79,6 +79,12 @@ export interface ParsedDocumentData {
   specialAllowance?: number;
   providentFund?: number;
 
+  // Deductions (from Form 16 Part B)
+  section80C?: number;
+  section80D?: number;
+  section80CCD1B?: number;
+  section80CCD2?: number;
+
   // Generic
   rawText?: string;
   confidence?: number;

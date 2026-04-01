@@ -35,7 +35,7 @@ export default function SessionsPage() {
 
   const handleNewSession = async () => {
     clearSession();
-    await createSession.mutateAsync();
+    await createSession.mutateAsync(undefined);
     router.push('/upload');
   };
 
