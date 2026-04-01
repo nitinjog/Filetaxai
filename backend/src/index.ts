@@ -70,6 +70,9 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
+// Serve locally-uploaded files (fallback when Cloudinary is not configured)
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 }
