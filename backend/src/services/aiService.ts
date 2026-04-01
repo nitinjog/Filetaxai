@@ -127,18 +127,20 @@ Rules:
 
 // ─── Form 16 Extraction with Gemini 2.5 Flash ────────────────────────────────
 // Primary: Google native SDK (direct) with PDF vision for best accuracy.
-// Fallback: OpenRouter → Gemini 2.5 Flash → then OpenAI gpt-4.1.
+// Extraction chain: Gemini direct (PDF vision) → Gemini direct (text) → OpenRouter → gpt-4o
 
 export async function extractForm16WithGemini(
   rawText: string,
   pdfBuffer?: Buffer
 ): Promise<ParsedForm16> {
-  // ── Attempt 1: Google direct SDK with PDF vision ──────────────────────────
+  const GEMINI_MODELS = [GEMINI_FLASH_MODEL, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const fullPrompt = `${FORM16_EXTRACTION_PROMPT}\n\nDocument text:\n${rawText.substring(0, 15000)}`;
+
+  // ── Attempt 1: Gemini direct SDK — PDF vision (best accuracy) ────────────
   if (process.env.GEMINI_API_KEY && pdfBuffer && pdfBuffer.length > 0) {
     try {
       const genAI = getGeminiClient();
-      // Try multiple model names in case one isn't available
-      for (const modelName of [GEMINI_FLASH_MODEL, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
+      for (const modelName of GEMINI_MODELS) {
         try {
           const model = genAI.getGenerativeModel({ model: modelName });
           const base64Pdf = pdfBuffer.toString("base64");
@@ -146,43 +148,57 @@ export async function extractForm16WithGemini(
             FORM16_EXTRACTION_PROMPT,
             { inlineData: { mimeType: "application/pdf", data: base64Pdf } },
           ]);
-          const responseText = result.response.text();
-          const jsonStr = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          const parsed = JSON.parse(jsonStr);
-          console.log(`[Gemini Direct] Used model: ${modelName}`);
-          return buildForm16Result(parsed, rawText);
+          const jsonStr = result.response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          console.log(`[Gemini Direct PDF] Succeeded with model: ${modelName}`);
+          return buildForm16Result(JSON.parse(jsonStr), rawText);
         } catch (modelErr) {
           const msg = (modelErr as Error).message;
-          if (msg.includes("404") || msg.includes("not found")) continue; // try next model
-          if (msg.includes("429") || msg.includes("quota")) {
-            console.warn(`[Gemini Direct] Quota exceeded for ${modelName}, using OpenRouter`);
-            break; // stop trying direct, fall through to OpenRouter
-          }
+          if (msg.includes("404") || msg.includes("not found")) continue;
+          if (msg.includes("429") || msg.includes("quota")) { break; }
           throw modelErr;
         }
       }
-    } catch (directErr) {
-      console.warn("[Gemini Direct] Failed, trying OpenRouter:", (directErr as Error).message);
+    } catch (err) {
+      console.warn("[Gemini Direct PDF] Failed:", (err as Error).message);
     }
   }
 
-  // ── Attempt 2: OpenRouter → Gemini 2.5 Flash ─────────────────────────────
-  console.log("[Parse] Using OpenRouter → Gemini 2.5 Flash...");
-  const fullPrompt = `${FORM16_EXTRACTION_PROMPT}\n\nDocument text:\n${rawText.substring(0, 15000)}`;
-
-  let raw: string;
-  try {
-    raw = await callAI(INDIAN_TAX_SYSTEM_PROMPT, fullPrompt, GEMINI_MODEL, true);
-  } catch {
-    // ── Attempt 3: OpenRouter → gpt-4.1 ──────────────────────────────────
-    console.warn("[Parse] Gemini via OpenRouter failed, trying gpt-4o...");
-    raw = await callAI(INDIAN_TAX_SYSTEM_PROMPT, fullPrompt, PRIMARY_MODEL, true);
+  // ── Attempt 2: Gemini direct SDK — text only ──────────────────────────────
+  if (process.env.GEMINI_API_KEY && rawText.length > 50) {
+    try {
+      const genAI = getGeminiClient();
+      for (const modelName of GEMINI_MODELS) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent([fullPrompt]);
+          const jsonStr = result.response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          console.log(`[Gemini Direct Text] Succeeded with model: ${modelName}`);
+          return buildForm16Result(JSON.parse(jsonStr), rawText);
+        } catch (modelErr) {
+          const msg = (modelErr as Error).message;
+          if (msg.includes("404") || msg.includes("not found")) continue;
+          if (msg.includes("429") || msg.includes("quota")) { break; }
+          throw modelErr;
+        }
+      }
+    } catch (err) {
+      console.warn("[Gemini Direct Text] Failed:", (err as Error).message);
+    }
   }
 
-  const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  const parsed = JSON.parse(jsonStr);
-
-  return buildForm16Result(parsed, rawText);
+  // ── Attempt 3: OpenRouter → Gemini 2.5 Flash ─────────────────────────────
+  console.log("[Parse] Gemini direct unavailable, trying OpenRouter → Gemini...");
+  try {
+    const raw = await callAI(INDIAN_TAX_SYSTEM_PROMPT, fullPrompt, GEMINI_MODEL, true);
+    const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    return buildForm16Result(JSON.parse(jsonStr), rawText);
+  } catch {
+    // ── Attempt 4: OpenRouter → gpt-4o ───────────────────────────────────
+    console.warn("[Parse] OpenRouter Gemini failed, trying OpenRouter → gpt-4o...");
+    const raw = await callAI(INDIAN_TAX_SYSTEM_PROMPT, fullPrompt, PRIMARY_MODEL, true);
+    const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    return buildForm16Result(JSON.parse(jsonStr), rawText);
+  }
 }
 
 // ─── Shared: build ParsedForm16 from AI response ──────────────────────────────
