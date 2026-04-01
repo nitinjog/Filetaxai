@@ -39,6 +39,7 @@ app.use(
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 
 const allowedOrigins = [
+  "https://filetaxai.netlify.app",
   process.env.FRONTEND_URL || "http://localhost:3000",
   "http://localhost:3000",
   "http://localhost:3001",
