@@ -20,6 +20,9 @@ import { disconnectDB } from "./models/db";
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
 
+// Trust Render/Netlify reverse proxy for accurate IP detection
+app.set("trust proxy", 1);
+
 // ─── Security Middleware ──────────────────────────────────────────────────────
 
 app.use(
